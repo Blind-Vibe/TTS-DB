@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import { Save, ArrowLeft, Calendar, Clock, Users, DollarSign, MapPin, Image, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useAI } from '../contexts/AIContext';
+import { useEvents } from '../hooks/useEvents';
 import Breadcrumbs, { useBreadcrumbs } from '../components/navigation/Breadcrumbs';
 
 interface EventFormData {
@@ -45,6 +46,7 @@ const CreateEvent: React.FC = () => {
     marketingCopy?: string;
   }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { createEvent } = useEvents();
 
   // Auth check
   useEffect(() => {
@@ -120,12 +122,13 @@ const CreateEvent: React.FC = () => {
 
     setIsSubmitting(true);
     try {
-      // Here you would typically call an API to create the event
-      // For now, we'll simulate the process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      toast.success('Event created successfully!');
-      navigate('/calendar');
+      const { success, event, error } = await createEvent(formData);
+      if (success && event) {
+        toast.success('Event created successfully!');
+        navigate(`/events/${event.id}`);
+      } else {
+        toast.error(error?.message || 'Failed to create event');
+      }
     } catch (error) {
       toast.error('Failed to create event');
     } finally {
