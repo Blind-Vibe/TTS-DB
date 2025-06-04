@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "test": "vitest run src/test/app-validation.test.ts src/hooks/__tests__/useAlerts.test.ts",
+    "test": "vitest run src/test/app-validation.test.ts src/hooks/__tests__/useAlerts.test.ts src/lib/api/schemas/__tests__/eventRules.test.ts",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage"
