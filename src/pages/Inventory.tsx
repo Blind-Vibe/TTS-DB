@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import { 
   Search, 
@@ -248,10 +249,11 @@ const QuickActions: React.FC = () => {
 // Table view component
 const InventoryTable: React.FC<{
   items: InventoryItem[];
+  onView: (item: InventoryItem) => void;
   onEdit: (item: InventoryItem) => void;
   onDelete: (item: InventoryItem) => void;
   onQuickStock: (item: InventoryItem) => void;
-}> = ({ items, onEdit, onDelete, onQuickStock }) => {
+}> = ({ items, onView, onEdit, onDelete, onQuickStock }) => {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
       <div className="overflow-x-auto">
@@ -324,17 +326,23 @@ const InventoryTable: React.FC<{
                         <RefreshCw className="w-4 h-4" />
                       </button>
                       <button
+                        onClick={() => onView(item)}
+                        className="text-gray-600 hover:text-gray-900"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => onEdit(item)}
                         className="text-indigo-600 hover:text-indigo-900"
                       >
                         <Edit className="w-4 h-4" />
                       </button>
-                    <button 
+                      <button
                         onClick={() => onDelete(item)}
                         className="text-red-600 hover:text-red-900"
                       >
                         <Trash2 className="w-4 h-4" />
-                    </button>
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -359,6 +367,8 @@ const Inventory: React.FC = () => {
   const [isTransactionModalOpen, setIsTransactionModalOpen] = useState<boolean>(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [selectedCategory_, setSelectedCategory_] = useState<InventoryCategory | null>(null);
+
+  const navigate = useNavigate();
 
   // Hooks with proper type handling
   const inventoryItemsResult = useInventoryItems();
@@ -521,6 +531,10 @@ const Inventory: React.FC = () => {
     }
   };
 
+  const handleViewItem = (item: InventoryItem): void => {
+    navigate(`/inventory/${item.id}`);
+  };
+
   const handleQuickStock = (item: InventoryItem): void => {
     setSelectedItem(item);
     setIsTransactionModalOpen(true);
@@ -670,7 +684,7 @@ const Inventory: React.FC = () => {
                 <InventoryItemCard
                   key={item.id}
                   item={item}
-                  onView={() => {/* TODO: Implement view functionality */}}
+                  onView={() => handleViewItem(item)}
                   onEdit={() => handleEditItem(item)}
                   onDelete={() => handleDeleteItem(item)}
                   onQuickStock={() => handleQuickStock(item)}
@@ -680,6 +694,7 @@ const Inventory: React.FC = () => {
           ) : (
             <InventoryTable
               items={filteredItems}
+              onView={handleViewItem}
               onEdit={handleEditItem}
               onDelete={handleDeleteItem}
               onQuickStock={handleQuickStock}
