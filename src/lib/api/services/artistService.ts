@@ -523,6 +523,108 @@ export class ArtistService {
   }
 
   /**
+   * Delete an artist with business rule validation
+   */
+  static async deleteArtist(
+    params: ArtistIdRequest,
+    requestId: string = crypto.randomUUID(),
+    userId: string = 'system'
+  ): Promise<ApiResponse<{ deleted: boolean }> | ApiResponse<ApiError>> {
+    try {
+      const validatedParams = ArtistIdSchema.parse(params);
+
+      const startTime = Date.now();
+      logger.info('Deleting artist', {
+        requestId,
+        userId,
+        artistId: validatedParams.id
+      });
+
+      // Fetch existing artist for business rule checks
+      const existingResponse = await this.getArtistById(
+        { id: validatedParams.id },
+        requestId,
+        userId
+      );
+
+      if ('data' in existingResponse && 'type' in existingResponse.data) {
+        return existingResponse as ApiResponse<ApiError>;
+      }
+
+      const existingArtist = (existingResponse as ApiResponse<Artist>).data;
+      const canDelete = validateArtistBusinessRules.canDelete(existingArtist);
+      if (!canDelete.valid) {
+        return createErrorResponse(
+          'BUSINESS_RULE_VIOLATION',
+          'Cannot delete artist',
+          400,
+          canDelete.reason || 'Artist cannot be deleted',
+          requestId
+        );
+      }
+
+      const { error } = await supabase
+        .from(this.TABLE_NAME)
+        .delete()
+        .eq('id', validatedParams.id);
+
+      if (error) {
+        logger.error('Failed to delete artist', {
+          requestId,
+          userId,
+          artistId: validatedParams.id,
+          error: error.message
+        });
+
+        return createErrorResponse(
+          'DELETE_FAILED',
+          'Failed to delete artist',
+          500,
+          'An error occurred while deleting the artist',
+          requestId,
+          { originalError: error.message }
+        );
+      }
+
+      logger.info('Artist deleted successfully', {
+        requestId,
+        userId,
+        artistId: validatedParams.id,
+        duration: Date.now() - startTime
+      });
+
+      return createSuccessResponse({ deleted: true }, requestId);
+
+    } catch (error) {
+      if (error instanceof Error && error.name === 'ZodError') {
+        return createErrorResponse(
+          'VALIDATION_ERROR',
+          'Validation failed',
+          400,
+          'The provided artist ID is invalid',
+          requestId,
+          { validationErrors: (error as any).errors }
+        );
+      }
+
+      logger.error('Unexpected error in deleteArtist', {
+        requestId,
+        userId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+
+      return createErrorResponse(
+        'INTERNAL_ERROR',
+        'Unexpected error occurred',
+        500,
+        'An unexpected error occurred while deleting the artist',
+        requestId,
+        { originalError: error instanceof Error ? error.message : 'Unknown error' }
+      );
+    }
+  }
+
+  /**
    * Enhanced artist data with business flags and metrics
    */
   private static enhanceArtistData(rawArtist: any, requestId: string): Artist {

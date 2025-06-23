@@ -345,4 +345,57 @@ describe('ArtistService', () => {
       }
     });
   });
-}); 
+
+  describe('deleteArtist', () => {
+    it('should delete an artist successfully', async () => {
+      const mockArtist = globalThis.testUtils.mockArtist();
+
+      mockSupabaseClient.from().single
+        .mockResolvedValueOnce({ data: mockArtist, error: null });
+      mockSupabaseClient.from().delete.mockResolvedValueOnce({ error: null });
+
+      const result = await ArtistService.deleteArtist(
+        { id: mockArtist.id },
+        'test-request-id',
+        'test-user'
+      );
+
+      if ('deleted' in result.data) {
+        expect(result.data.deleted).toBe(true);
+      }
+      expect(mockSupabaseClient.from().delete).toHaveBeenCalled();
+    });
+
+    it('should validate artist ID on delete', async () => {
+      const result = await ArtistService.deleteArtist(
+        { id: 'invalid-id' },
+        'test-request-id',
+        'test-user'
+      );
+
+      if ('type' in result.data) {
+        expect(result.data.title).toBe('Validation failed');
+        expect(result.data.status).toBe(400);
+      }
+    });
+
+    it('should handle database errors on delete', async () => {
+      const mockArtist = globalThis.testUtils.mockArtist();
+
+      mockSupabaseClient.from().single
+        .mockResolvedValueOnce({ data: mockArtist, error: null });
+      mockSupabaseClient.from().delete.mockResolvedValueOnce({ error: { message: 'db error', code: 'DB_ERR' } });
+
+      const result = await ArtistService.deleteArtist(
+        { id: mockArtist.id },
+        'test-request-id',
+        'test-user'
+      );
+
+      if ('type' in result.data) {
+        expect(result.data.title).toBe('Failed to delete artist');
+        expect(result.data.status).toBe(500);
+      }
+    });
+  });
+});

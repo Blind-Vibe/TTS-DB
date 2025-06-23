@@ -106,9 +106,8 @@ export function useArtists(query?: Partial<ArtistQueryRequest>) {
 
   const deleteArtistMutation = useMutation({
     mutationFn: async (id: string) => {
-      // Note: Need to check if deleteArtist method exists in ArtistService
-      // If not, we'll need to implement it
-      throw new Error('Delete functionality not implemented in ArtistService');
+      const response = await ArtistService.deleteArtist({ id });
+      return handleServiceResponse(response);
     },
     onSuccess: (_, deletedId) => {
       queryClient.invalidateQueries({ queryKey: ['artists'] });

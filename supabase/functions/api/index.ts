@@ -535,7 +535,7 @@ const routes: RouteHandler[] = [
       }
       
       if (req.method === 'DELETE') {
-        const result = await artistService.deleteArtist(id);
+        const result = await ArtistService.deleteArtist({ id });
         return createResponse(result, result.success ? 200 : 400);
       }
       

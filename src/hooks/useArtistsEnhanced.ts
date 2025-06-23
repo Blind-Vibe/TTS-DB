@@ -370,41 +370,25 @@ export const useArtistsEnhanced = () => {
     const requestId = crypto.randomUUID();
 
     try {
-      // Find existing artist
-      const existingArtist = state.artists.find(a => a.id === id);
-      if (!existingArtist) {
-        const notFoundError = new NotFoundError('artist');
-        return createErrorResponse(notFoundError, requestId) as ApiResponse<{ deleted: boolean }>;
+      const response = await ArtistService.deleteArtist({ id }, requestId);
+
+      if ("type" in response.data && response.data.type) {
+        return response as ApiResponse<{ deleted: boolean }>;
       }
 
-      // Check if artist can be deleted
-      if (!existingArtist.canDelete) {
-        const businessRuleError = new ValidationErrorClass([{
-          field: 'id',
-          code: 'BUSINESS_RULE_VIOLATION',
-          message: 'Artist cannot be deleted due to upcoming performances',
-        }]);
-        return createErrorResponse(businessRuleError, requestId) as ApiResponse<{ deleted: boolean }>;
-      }
-
-      // Note: ArtistService doesn't have delete method yet, so we'll simulate it
-      // In a real implementation, we would add deleteArtist to ArtistService
-      
-      // Update local state
       setState(prev => ({
         ...prev,
         artists: prev.artists.filter(a => a.id !== id),
       }));
 
-      return buildSuccessResponse({ deleted: true }, requestId, {
-        message: 'Artist deleted successfully'
-      });
+      return response as ApiResponse<{ deleted: boolean }>;
 
     } catch (error) {
-      const errorMessage = handleApiError(error, 'delete artist');
+      const errorMessage = handleApiError(error, "delete artist");
       return createErrorResponse(errorMessage, requestId) as ApiResponse<{ deleted: boolean }>;
     }
   }, [state.artists, handleApiError, createErrorResponse]);
+
 
   /**
    * Get artist by ID with enhanced data
