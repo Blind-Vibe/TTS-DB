@@ -48,6 +48,8 @@ import {
 } from 'lucide-react';
 import Breadcrumbs, { useBreadcrumbs } from '../components/navigation/Breadcrumbs';
 import { Document } from '../types';
+import { useDocuments } from '../hooks/useDocuments';
+import { useAnalyticsMetrics, useRecentActivity } from '../hooks/useAnalytics';
 import { toast } from 'react-hot-toast';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -529,65 +531,25 @@ const Documents: React.FC = () => {
   const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [showAnalytics, setShowAnalytics] = useState(false);
 
-  // Mock data for enhanced features
-  const mockDocuments: (Document & { 
-    versions?: DocumentVersion[]; 
-    comments?: DocumentComment[]; 
-    shares?: DocumentShare[];
-    lastActivity?: string;
-  })[] = useMemo(() => [
-    {
-      id: '1',
-      name: 'Event Contract Template',
-      type: 'template',
-      description: 'Standard event performance contract template',
-      content: null,
-      fileType: 'application/pdf',
-      fileSize: 1024000,
-      createdBy: 'Admin User',
-      createdAt: '2024-01-15T10:00:00Z',
-      updatedAt: '2024-01-16T14:30:00Z',
-      tags: ['contract', 'template', 'legal'],
-      isTemplate: true,
-      relatedEntityId: null,
-      relatedEntityType: null,
-      versions: [
-        { id: '1', documentId: '1', version: '1.0', content: null, createdBy: 'Admin User', createdAt: '2024-01-15T10:00:00Z', comment: 'Initial version', size: 1024000 },
-        { id: '2', documentId: '1', version: '1.1', content: null, createdBy: 'Admin User', createdAt: '2024-01-16T14:30:00Z', comment: 'Updated payment terms', size: 1045000 }
-      ],
-      comments: [
-        { id: '1', documentId: '1', userId: '1', userName: 'Legal Team', comment: 'Please review the liability clauses', createdAt: '2024-01-16T12:00:00Z', resolved: false }
-      ],
-      shares: [
-        { id: '1', documentId: '1', sharedWith: 'legal@trainstation.com', permission: 'edit', sharedBy: 'Admin User', createdAt: '2024-01-16T09:00:00Z' }
-      ],
-      lastActivity: '2024-01-16T14:30:00Z'
-    },
-    // ... more mock documents would be added here
-  ], []);
+  const { documents, isLoading } = useDocuments();
 
-  const mockAnalytics: DocumentAnalytics = useMemo(() => ({
-    totalDocuments: 147,
-    totalSize: '2.3 GB',
-    recentUploads: 12,
-    activeShares: 28,
-    totalViews: 1847,
-    totalDownloads: 392,
-    storageUsed: 2300,
-    storageLimit: 5000,
-  }), []);
+  const { metrics: analyticsMetrics } = useAnalyticsMetrics('documents');
+  const { data: recentActivities } = useRecentActivity(5);
 
-  const mockActivities: DocumentActivity[] = useMemo(() => [
-    { id: '1', type: 'created', documentId: '1', documentName: 'Event Contract Template', userId: '1', userName: 'Admin User', timestamp: new Date().toISOString() },
-    { id: '2', type: 'shared', documentId: '2', documentName: 'Marketing Budget 2024', userId: '2', userName: 'Marketing Team', timestamp: new Date(Date.now() - 3600000).toISOString() },
-    { id: '3', type: 'downloaded', documentId: '3', documentName: 'Venue Layout Plans', userId: '3', userName: 'Operations', timestamp: new Date(Date.now() - 7200000).toISOString() },
-    { id: '4', type: 'edited', documentId: '1', documentName: 'Event Contract Template', userId: '1', userName: 'Admin User', timestamp: new Date(Date.now() - 10800000).toISOString() },
-    { id: '5', type: 'commented', documentId: '4', documentName: 'Safety Protocols', userId: '4', userName: 'Safety Officer', timestamp: new Date(Date.now() - 14400000).toISOString() },
-  ], []);
+  const analytics: DocumentAnalytics = useMemo(() => ({
+    totalDocuments: documents.length,
+    totalSize: analyticsMetrics.find(m => m.metricName === 'storage_used')?.value + ' MB' || '0 MB',
+    recentUploads: analyticsMetrics.find(m => m.metricName === 'recent_uploads')?.value || 0,
+    activeShares: analyticsMetrics.find(m => m.metricName === 'active_shares')?.value || 0,
+    totalViews: analyticsMetrics.find(m => m.metricName === 'views')?.value || 0,
+    totalDownloads: analyticsMetrics.find(m => m.metricName === 'downloads')?.value || 0,
+    storageUsed: analyticsMetrics.find(m => m.metricName === 'storage_used')?.value || 0,
+    storageLimit: analyticsMetrics.find(m => m.metricName === 'storage_limit')?.value || 0,
+  }), [analyticsMetrics, documents.length]);
 
   // Filtered and sorted documents
   const filteredDocuments = useMemo(() => {
-    const filtered = mockDocuments.filter(doc => {
+    const filtered = documents.filter(doc => {
       const matchesSearch = doc.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            doc.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            doc.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -629,7 +591,7 @@ const Documents: React.FC = () => {
     });
 
     return filtered;
-  }, [mockDocuments, searchTerm, selectedCategory, sortBy, sortOrder]);
+  }, [documents, searchTerm, selectedCategory, sortBy, sortOrder]);
 
   // Event handlers
   const handleSelectDocument = (document: Document) => {
@@ -860,7 +822,7 @@ const Documents: React.FC = () => {
 
       {/* Document Analytics Dashboard */}
       {showAnalytics && (
-        <DocumentAnalyticsDashboard analytics={mockAnalytics} activities={mockActivities} />
+        <DocumentAnalyticsDashboard analytics={analytics} activities={recentActivities || []} />
       )}
     </div>
   );
