@@ -345,4 +345,67 @@ describe('ArtistService', () => {
       }
     });
   });
+
+  describe('deleteArtist', () => {
+    it('should delete an artist successfully', async () => {
+      const mockArtist = globalThis.testUtils.mockArtist({
+        id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479',
+        metrics: { totalPerformances: 0 }
+      });
+
+      mockSupabaseClient.from().single.mockResolvedValueOnce({
+        data: mockArtist,
+        error: null,
+      });
+      mockSupabaseClient.from().delete.mockReturnThis();
+      mockSupabaseClient.from().eq.mockResolvedValueOnce({ data: null, error: null });
+
+      const result = await ArtistService.deleteArtist(
+        { id: 'f47ac10b-58cc-4372-a567-0e02b2c3d479' },
+        'test-request-id',
+        'test-user'
+      );
+
+      if ('deleted' in result.data) {
+        expect(result.data.deleted).toBe(true);
+      }
+      expect(mockSupabaseClient.from().delete).toHaveBeenCalled();
+      expect(mockSupabaseClient.from().eq).toHaveBeenCalledWith('id', 'f47ac10b-58cc-4372-a567-0e02b2c3d479');
+    });
+
+    it('should prevent deletion when business rule fails', async () => {
+      const mockArtist = globalThis.testUtils.mockArtist({
+        metrics: { totalPerformances: 5 }
+      });
+
+      mockSupabaseClient.from().single.mockResolvedValueOnce({
+        data: mockArtist,
+        error: null,
+      });
+
+      const result = await ArtistService.deleteArtist(
+        { id: mockArtist.id },
+        'test-request-id',
+        'test-user'
+      );
+
+      if ('type' in result.data) {
+        expect(result.data.title).toBe('Cannot delete artist');
+        expect(result.data.status).toBe(400);
+      }
+    });
+
+    it('should validate artist ID for deletion', async () => {
+      const result = await ArtistService.deleteArtist(
+        { id: 'invalid-uuid' },
+        'test-request-id',
+        'test-user'
+      );
+
+      if ('type' in result.data) {
+        expect(result.data.title).toBe('Validation failed');
+        expect(result.data.status).toBe(400);
+      }
+    });
+  });
 }); 
