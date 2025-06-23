@@ -31,8 +31,8 @@ serve(async (req: Request) => {
     // Get environment variables
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const squareAppId = Deno.env.get("SQUARE_APP_ID") ?? "sandbox-sq0idb-mhLuaUX5qWaFJ9ftx-Y7Rg";
-    const squareAppSecret = Deno.env.get("SQUARE_APP_SECRET") ?? "EAAAlwwuqVJAT82PsThzIrKDyqqFOu-eA-65sWhjhNtyRi6Ha37KUXiLMO16XU8S";
+    const squareAppId = Deno.env.get("SQUARE_APP_ID") ?? "";
+    const squareAppSecret = Deno.env.get("SQUARE_APP_SECRET") ?? "";
     
     // Determine if we're using sandbox or production
     const isSandbox = squareAppId.startsWith("sandbox-");

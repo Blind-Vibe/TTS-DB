@@ -20,7 +20,7 @@ fi
 
 # Start application using PM2 for monitoring
 if command -v pm2 >/dev/null 2>&1; then
-  pm2 start dist/server.js --name trainstation-dashboard || pm2 restart trainstation-dashboard
+  pm2 serve dist 4173 --name trainstation-dashboard --spa || pm2 restart trainstation-dashboard
 fi
 
 echo "Deployment completed"
