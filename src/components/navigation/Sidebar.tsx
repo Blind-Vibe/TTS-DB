@@ -229,6 +229,12 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onToggle, isMobile: propIsMobil
               onClick={handleNavClick}
             />
             <NavItem
+              to="/settings/system"
+              icon={<Monitor size={18} />}
+              label="System Settings"
+              onClick={handleNavClick}
+            />
+            <NavItem
               to="/settings/user-roles"
               icon={<UserCog size={18} />}
               label="User Roles"
