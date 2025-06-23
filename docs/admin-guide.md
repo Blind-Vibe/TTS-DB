@@ -83,5 +83,7 @@ WHERE email = 'user@example.com';
 
 ## ✅ Next Steps
 
-The Settings module UI is still under construction. Until it is released, manage roles and configuration through Supabase or SQL commands.
+The Settings module now hosts all account and security configuration options. The previous placeholder tab in the Security Dashboard has been removed.
+
+Time tracking and payroll features for staff management are still under development and will remain hidden until released. Continue managing roles and configuration through Supabase or SQL commands.
 

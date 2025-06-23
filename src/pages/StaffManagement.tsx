@@ -6,10 +6,10 @@ import {
   Filter, 
   UserPlus, 
   Calendar, 
-  Clock, 
-  CreditCard, 
-  Star, 
-  Upload, 
+  Clock,
+  CreditCard,
+  Star,
+  Upload,
   Download,
   CheckCircle,
   XCircle,
@@ -27,7 +27,6 @@ import {
   MapPin,
   BarChart3,
   CalendarDays,
-  Timer,
   Target,
   Zap
 } from 'lucide-react';
@@ -999,14 +998,11 @@ const StaffManagement: React.FC = () => {
     isLoadingShifts, 
     addStaff, 
     updateStaff,
-    addShift, 
-    updateShift,
-    timeEntries,
-    addTimeEntry,
-    updateTimeEntry
+    addShift,
+    updateShift
   } = useStaffManagement();
   
-  const [activeTab, setActiveTab] = useState<'staff' | 'schedule' | 'timetracking' | 'performance'>('staff');
+  const [activeTab, setActiveTab] = useState<'staff' | 'schedule' | 'performance'>('staff');
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<string | null>(null);
   const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
@@ -1224,10 +1220,6 @@ const StaffManagement: React.FC = () => {
             <Calendar size={14} className="mr-2" />
             Schedule
           </TabsTrigger>
-            <TabsTrigger value="timetracking" className="flex items-center data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-400">
-            <Clock size={14} className="mr-2" />
-            Time Tracking
-          </TabsTrigger>
             <TabsTrigger value="performance" className="flex items-center data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-400">
               <BarChart3 size={14} className="mr-2" />
               Performance
@@ -1440,17 +1432,6 @@ const StaffManagement: React.FC = () => {
           </div>
         </TabsContent>
         
-        {/* Time Tracking Tab */}
-        <TabsContent value="timetracking">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-8 text-center backdrop-blur-sm border border-zinc-700/50">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent"></div>
-              <div className="relative">
-                <Timer size={48} className="mx-auto text-blue-500/50 mb-4" />
-                <h2 className="text-xl font-semibold text-white mb-2">Time Tracking System</h2>
-                <p className="text-gray-400">Advanced time tracking with payroll integration coming soon...</p>
-                </div>
-                          </div>
-          </TabsContent>
           
           {/* Performance Tab */}
           <TabsContent value="performance">

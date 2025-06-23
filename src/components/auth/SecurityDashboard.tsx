@@ -16,7 +16,6 @@ import {
   Lock,
   Unlock,
   Activity,
-  Settings,
   Bell,
   Filter,
   Download,
@@ -51,7 +50,7 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ onClose })
     changePassword
   } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'sessions' | 'devices' | 'alerts' | 'audit' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'sessions' | 'devices' | 'alerts' | 'audit'>('overview');
   const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
   const [auditFilter, setAuditFilter] = useState<'all' | 'login' | 'security' | 'changes'>('all');
   const [alertFilter, setAlertFilter] = useState<'all' | 'unresolved' | 'critical'>('all');
@@ -639,8 +638,7 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ onClose })
             { id: 'sessions', label: 'Sessions', icon: Activity },
             { id: 'devices', label: 'Devices', icon: Monitor },
             { id: 'alerts', label: 'Alerts', icon: Bell },
-            { id: 'audit', label: 'Audit Log', icon: Eye },
-            { id: 'settings', label: 'Settings', icon: Settings }
+            { id: 'audit', label: 'Audit Log', icon: Eye }
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -671,12 +669,6 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ onClose })
               {activeTab === 'devices' && renderDevices()}
               {activeTab === 'alerts' && renderAlerts()}
               {activeTab === 'audit' && renderAuditLog()}
-              {activeTab === 'settings' && (
-                <div className="text-center py-12 text-gray-400">
-                  <Settings className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Security settings configuration coming soon</p>
-                </div>
-              )}
             </>
           )}
         </div>
