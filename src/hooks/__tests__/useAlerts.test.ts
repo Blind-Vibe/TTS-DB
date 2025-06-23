@@ -9,12 +9,6 @@ vi.mock('../../lib/openaiClient', () => ({
 import { generateRealTimeAlert } from '../useAlerts';
 import { openai } from '../../lib/openaiClient';
 
-vi.mock('../../lib/openaiClient', () => ({
-  openai: {
-    chat: { completions: { create: vi.fn() } }
-  }
-}));
-
 const alertData = {
   metric_name: 'Revenue',
   current_value: 1200,
@@ -43,3 +37,4 @@ describe('generateRealTimeAlert', () => {
     expect(alert).toBe('AI Alert');
   });
 });
+
