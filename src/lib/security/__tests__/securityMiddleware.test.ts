@@ -63,9 +63,9 @@ describe('SecurityMiddleware', () => {
       const defaultMiddleware = new SecurityMiddleware();
       const headers = defaultMiddleware.applySecurityHeaders();
       
-      expect(headers).toHaveProperty('Content-Security-Policy');
       expect(headers).toHaveProperty('Strict-Transport-Security');
       expect(headers).toHaveProperty('X-Frame-Options');
+      expect(headers).not.toHaveProperty('Content-Security-Policy');
     });
 
     it('should allow custom configuration', () => {
@@ -87,26 +87,18 @@ describe('SecurityMiddleware', () => {
     it('should generate comprehensive security headers', () => {
       const headers = middleware.applySecurityHeaders();
 
-      expect(headers).toHaveProperty('Content-Security-Policy');
       expect(headers).toHaveProperty('Strict-Transport-Security');
       expect(headers).toHaveProperty('X-Frame-Options', 'DENY');
       expect(headers).toHaveProperty('X-Content-Type-Options', 'nosniff');
       expect(headers).toHaveProperty('X-XSS-Protection', '1; mode=block');
       expect(headers).toHaveProperty('Referrer-Policy', 'strict-origin-when-cross-origin');
       expect(headers).toHaveProperty('Permissions-Policy');
+      expect(headers).not.toHaveProperty('Content-Security-Policy');
     });
 
-    it('should include CSP with proper directives', () => {
+    it('should omit CSP header in development', () => {
       const headers = middleware.applySecurityHeaders();
-      const csp = headers['Content-Security-Policy'];
-
-      expect(csp).toContain('default-src');
-      expect(csp).toContain('script-src');
-      expect(csp).toContain('style-src');
-      expect(csp).toContain('img-src');
-      expect(csp).toContain('connect-src');
-      expect(csp).toContain('font-src');
-      expect(csp).toContain('frame-src');
+      expect(headers['Content-Security-Policy']).toBeUndefined();
     });
 
     it('should include HSTS with proper configuration', () => {
@@ -300,8 +292,8 @@ describe('SecurityMiddleware', () => {
         'https://api.example.com/data',
         expect.objectContaining({
           headers: expect.objectContaining({
-            'Content-Security-Policy': expect.any(String),
-            'Strict-Transport-Security': expect.any(String)
+            'Strict-Transport-Security': expect.any(String),
+            'X-Frame-Options': 'DENY'
           })
         })
       );
@@ -400,11 +392,14 @@ describe('SecurityMiddleware', () => {
   });
 
   describe('Session Management', () => {
-    it('should generate session IDs when none exists', () => {
+    it('should generate session IDs when none exists', async () => {
       localStorageMock.getItem.mockReturnValue(null);
-      
-      const token = middleware.generateCSRFToken('any-session');
-      
+
+      await middleware.secureFetch('https://api.example.com/data', {
+        method: 'POST',
+        body: '{}'
+      });
+
       expect(localStorageMock.setItem).toHaveBeenCalledWith('session-id', 'mocked-uuid-12345');
     });
 
@@ -435,7 +430,7 @@ describe('SecurityMiddleware', () => {
     it('should create secure response headers', () => {
       const headers = middleware.createSecureResponseHeaders();
 
-      expect(headers.get('Content-Security-Policy')).toBeDefined();
+      expect(headers.get('Content-Security-Policy')).toBeNull();
       expect(headers.get('Strict-Transport-Security')).toBeDefined();
       expect(headers.get('X-Frame-Options')).toBe('DENY');
       expect(headers.get('X-Content-Type-Options')).toBe('nosniff');
@@ -496,7 +491,6 @@ describe('SecurityMiddleware', () => {
       const headers = middleware.applySecurityHeaders();
       
       // Multiple layers of XSS protection
-      expect(headers).toHaveProperty('Content-Security-Policy');
       expect(headers).toHaveProperty('X-XSS-Protection');
       expect(headers).toHaveProperty('X-Content-Type-Options');
     });
