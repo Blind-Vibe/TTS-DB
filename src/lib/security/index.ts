@@ -311,8 +311,8 @@ export class FileUploadSecurity {
 
     // Check file content if provided
     if (file.content) {
-      const errors = this.scanFileContent(file.content);
-      errors.forEach(error => errors.push(error));
+      const scanErrors = this.scanFileContent(file.content);
+      scanErrors.forEach(error => errors.push(error));
     }
 
     return {
