@@ -1016,54 +1016,89 @@ const StaffManagement: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
-  // Generate comprehensive mock analytics data
-  const mockAnalytics = useMemo((): StaffAnalytics => ({
-    totalStaff: 45,
-    activeStaff: 42,
-    activeShifts: 12,
-    monthlyPayroll: 78500,
-    averageAttendance: 94.2,
-    totalDepartments: 6,
-    overtimeHours: 127,
-    productivityScore: 88.5
-  }), []);
+  const analytics = useMemo((): StaffAnalytics => {
+    const totalStaff = staff.length;
+    const activeStaff = staff.filter(s => s.isActive).length;
+    const activeShifts = shifts.filter(s => new Date(s.startTime) <= Date.now() && new Date(s.endTime) >= Date.now()).length;
+    const monthlyPayroll = staff.reduce((sum, s) => sum + (s.hourlyRate || 0) * 160, 0);
+    const attendanceEntries = timeEntries.length;
+    const averageAttendance = attendanceEntries ?
+      (timeEntries.filter(e => e.clockOutTime).length / attendanceEntries) * 100 : 0;
+    const totalDepartments = new Set(staff.map(s => s.department)).size;
+    const overtimeHours = timeEntries.reduce((sum, e) => sum + Math.max((e.totalHours || 0) - 8, 0), 0);
+    return {
+      totalStaff,
+      activeStaff,
+      activeShifts,
+      monthlyPayroll,
+      averageAttendance,
+      totalDepartments,
+      overtimeHours,
+      productivityScore: 0
+    };
+  }, [staff, shifts, timeEntries]);
 
-  const mockDepartments = useMemo((): DepartmentMetrics[] => [
-    { name: 'Operations', staffCount: 15, avgPerformance: 89, totalHours: 2400, payroll: 28500, activeShifts: 5 },
-    { name: 'Customer Service', staffCount: 12, avgPerformance: 92, totalHours: 1920, payroll: 21600, activeShifts: 4 },
-    { name: 'Security', staffCount: 8, avgPerformance: 87, totalHours: 1280, payroll: 15200, activeShifts: 2 },
-    { name: 'Maintenance', staffCount: 6, avgPerformance: 85, totalHours: 960, payroll: 9600, activeShifts: 1 },
-    { name: 'Administration', staffCount: 3, avgPerformance: 94, totalHours: 480, payroll: 2400, activeShifts: 0 },
-    { name: 'Food & Beverage', staffCount: 1, avgPerformance: 88, totalHours: 160, payroll: 1200, activeShifts: 0 }
-  ], []);
+  const departmentMetrics = useMemo((): DepartmentMetrics[] => {
+    const deptMap: Record<string, DepartmentMetrics> = {};
+    staff.forEach(member => {
+      if (!deptMap[member.department]) {
+        deptMap[member.department] = {
+          name: member.department,
+          staffCount: 0,
+          avgPerformance: 0,
+          totalHours: 0,
+          payroll: 0,
+          activeShifts: 0
+        };
+      }
+      const dept = deptMap[member.department];
+      dept.staffCount += 1;
+      dept.payroll += (member.hourlyRate || 0) * 160;
+    });
+    shifts.forEach(shift => {
+      const dept = deptMap[staff.find(s => s.id === shift.staffId)?.department || ''];
+      if (dept) {
+        dept.activeShifts += 1;
+      }
+    });
+    return Object.values(deptMap);
+  }, [staff, shifts]);
 
-  const mockPerformanceMetrics = useMemo((): PerformanceMetrics[] => 
-    staff.slice(0, 10).map((member, index) => ({
-      staffId: member.id,
-      name: `${member.firstName} ${member.lastName}`,
-      department: member.department,
-      performanceScore: Math.floor(Math.random() * 25) + 75,
-      attendanceRate: Math.floor(Math.random() * 15) + 85,
-      overtimeHours: Math.floor(Math.random() * 20) + 5,
-      totalHours: Math.floor(Math.random() * 50) + 150,
-      productivity: Math.floor(Math.random() * 20) + 80,
-      customerRating: Math.round((Math.random() * 1.5 + 3.5) * 10) / 10,
-      tasksCompleted: Math.floor(Math.random() * 30) + 15
-    })), [staff]);
+  const performanceMetrics = useMemo((): PerformanceMetrics[] =>
+    staff.map(member => {
+      const entries = timeEntries.filter(e => e.staffId === member.id);
+      const totalHours = entries.reduce((sum, e) => sum + (e.totalHours || 0), 0);
+      const overtimeHours = entries.reduce((sum, e) => sum + Math.max((e.totalHours || 0) - 8, 0), 0);
+      const attendanceRate = entries.length ? (entries.filter(e => e.clockOutTime).length / entries.length) * 100 : 100;
+      return {
+        staffId: member.id,
+        name: `${member.firstName} ${member.lastName}`,
+        department: member.department,
+        performanceScore: 0,
+        attendanceRate,
+        overtimeHours,
+        totalHours,
+        productivity: 0,
+        customerRating: 0,
+        tasksCompleted: 0
+      };
+    }), [staff, timeEntries]);
 
-  const mockPayrollData = useMemo((): PayrollSummary[] => [
-    { department: 'Operations', totalHours: 2400, regularPay: 24000, overtimePay: 4500, bonuses: 1200, totalPay: 29700, staffCount: 15 },
-    { department: 'Customer Service', totalHours: 1920, regularPay: 19200, overtimePay: 2400, bonuses: 800, totalPay: 22400, staffCount: 12 },
-    { department: 'Security', totalHours: 1280, regularPay: 12800, overtimePay: 2400, bonuses: 600, totalPay: 15800, staffCount: 8 },
-    { department: 'Maintenance', totalHours: 960, regularPay: 9600, overtimePay: 1440, bonuses: 400, totalPay: 11440, staffCount: 6 },
-    { department: 'Administration', totalHours: 480, regularPay: 7200, overtimePay: 0, bonuses: 300, totalPay: 7500, staffCount: 3 },
-    { department: 'Food & Beverage', totalHours: 160, regularPay: 1600, overtimePay: 200, bonuses: 100, totalPay: 1900, staffCount: 1 }
-  ], []);
+  const payrollData = useMemo((): PayrollSummary[] =>
+    departmentMetrics.map(dept => ({
+      department: dept.name,
+      totalHours: dept.totalHours,
+      regularPay: dept.payroll,
+      overtimePay: 0,
+      bonuses: 0,
+      totalPay: dept.payroll,
+      staffCount: dept.staffCount
+    })), [departmentMetrics]);
 
   // Enhanced staff with performance metrics
-  const enhancedStaff = useMemo(() => 
+  const enhancedStaff = useMemo(() =>
     staff.map(member => {
-      const metrics = mockPerformanceMetrics.find(m => m.staffId === member.id) || {
+      const metrics = performanceMetrics.find(m => m.staffId === member.id) || {
         staffId: member.id,
         name: `${member.firstName} ${member.lastName}`,
         department: member.department,
@@ -1076,35 +1111,9 @@ const StaffManagement: React.FC = () => {
         tasksCompleted: 25
       };
       return { ...member, metrics };
-    }), [staff, mockPerformanceMetrics]);
+    }), [staff, performanceMetrics]);
 
-  // Generate mock shifts with realistic data
-  const mockShifts = useMemo(() => {
-    const shiftTypes = ['regular', 'overtime', 'event', 'training'];
-    const locations = ['Platform A', 'Platform B', 'Main Hall', 'Security Desk', 'Ticket Office', 'Maintenance Bay'];
-    
-    return Array.from({ length: 25 }, (_, index) => {
-      const startDate = addDays(new Date(), Math.floor(Math.random() * 14) - 7);
-      const startHour = Math.floor(Math.random() * 16) + 6; // 6 AM to 10 PM
-      const duration = [4, 6, 8, 12][Math.floor(Math.random() * 4)];
-      
-      return {
-        id: `shift-${index + 1}`,
-        staffId: staff[Math.floor(Math.random() * Math.min(staff.length, 10))]?.id || 'staff-1',
-        shiftType: shiftTypes[Math.floor(Math.random() * shiftTypes.length)],
-        startTime: new Date(startDate.setHours(startHour)).toISOString(),
-        endTime: new Date(startDate.setHours(startHour + duration)).toISOString(),
-        title: `${shiftTypes[Math.floor(Math.random() * shiftTypes.length)]} Shift`,
-        location: locations[Math.floor(Math.random() * locations.length)],
-        status: ['scheduled', 'confirmed', 'completed'][Math.floor(Math.random() * 3)],
-        isRecurring: Math.random() > 0.7,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    });
-  }, [staff]);
-
-  const allShifts = [...shifts, ...mockShifts];
+  const allShifts = shifts;
   
   // Filter and search functionality
   const departments = useMemo(() => 
@@ -1211,7 +1220,7 @@ const StaffManagement: React.FC = () => {
       </div>
 
         {/* Analytics Dashboard */}
-        <StaffAnalyticsDashboard analytics={mockAnalytics} departments={mockDepartments} />
+        <StaffAnalyticsDashboard analytics={analytics} departments={departmentMetrics} />
       
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)} className="w-full">
@@ -1434,7 +1443,7 @@ const StaffManagement: React.FC = () => {
                   <CalendarView shifts={allShifts} onShiftClick={handleShiftClick} />
                 </div>
                 <div className="space-y-6">
-                  <PayrollSummaryPanel payrollData={mockPayrollData} />
+                  <PayrollSummaryPanel payrollData={payrollData} />
               </div>
             </div>
           </div>
@@ -1464,7 +1473,7 @@ const StaffManagement: React.FC = () => {
                       Top Performers
                     </h3>
                     <div className="space-y-3">
-                      {mockPerformanceMetrics.slice(0, 5).map((performer, index) => (
+                      {performanceMetrics.slice(0, 5).map((performer, index) => (
                         <div key={index} className="flex items-center justify-between p-3 rounded-lg bg-zinc-800/30">
                           <div className="flex items-center space-x-3">
                             <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center text-white text-sm font-semibold">
@@ -1493,7 +1502,7 @@ const StaffManagement: React.FC = () => {
                       Department Performance
                     </h3>
                     <ResponsiveContainer width="100%" height={200}>
-                      <BarChart data={mockDepartments}>
+                      <BarChart data={departmentMetrics}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                         <XAxis 
                           dataKey="name" 

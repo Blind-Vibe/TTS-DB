@@ -14,6 +14,9 @@ import {
   Clock
 } from 'lucide-react';
 import Breadcrumbs, { useBreadcrumbs } from '../components/navigation/Breadcrumbs';
+import { useRoyaltyReports, useArtistContracts, useArtistPayments } from '../hooks/useArtistContracts';
+import { useArtists } from '../hooks/useArtists';
+import { artistContractsApi } from '../lib/supabase';
 
 interface Artist {
   id: string;
@@ -54,121 +57,31 @@ interface RoyaltyReport {
 
 const ArtistRoyalties: React.FC = () => {
   const breadcrumbs = useBreadcrumbs();
-  
-  const [payments, setPayments] = useState<RoyaltyPayment[]>([]);
+
+  const { artists: artistList, isLoading: isArtistsLoading } = useArtists();
+  const { payments: paymentList, isLoading: isPaymentsLoading } = useArtistPayments();
+  const { reports, isLoading: isReportsLoading } = useRoyaltyReports();
+  const report = reports[0] || null;
+
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [report, setReport] = useState<RoyaltyReport | null>(null);
+  const [payments, setPayments] = useState<RoyaltyPayment[]>([]);
+
+  useEffect(() => {
+    setArtists(artistList);
+  }, [artistList]);
+
+  useEffect(() => {
+    setPayments(paymentList);
+  }, [paymentList]);
+
   const [selectedPeriod, setSelectedPeriod] = useState('current_month');
   const [selectedArtist, setSelectedArtist] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<RoyaltyPayment | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, [selectedPeriod]);
-
-  const loadData = async () => {
-    setIsLoading(true);
-    try {
-      // Mock data for demonstration
-      const mockArtists: Artist[] = [
-        {
-          id: '1',
-          name: 'River Junction',
-          email: 'band@riverjunction.com',
-          phone: '(555) 123-4567',
-          contractType: 'percentage',
-          contractRate: 70,
-          image: 'https://images.pexels.com/photos/1481308/pexels-photo-1481308.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1'
-        },
-        {
-          id: '2',
-          name: 'Sarah Allen',
-          email: 'sarah@sarahallen.com',
-          phone: '(555) 234-5678',
-          contractType: 'flat_rate',
-          contractRate: 500,
-          image: 'https://images.pexels.com/photos/1699159/pexels-photo-1699159.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1'
-        },
-        {
-          id: '3',
-          name: 'Mountain Road',
-          email: 'info@mountainroad.net',
-          contractType: 'percentage',
-          contractRate: 65
-        }
-      ];
-
-      const mockPayments: RoyaltyPayment[] = [
-        {
-          id: '1',
-          artistId: '1',
-          artistName: 'River Junction',
-          eventId: 'evt_1',
-          eventTitle: 'Blues Night with River Junction',
-          eventDate: '2024-01-15',
-          grossRevenue: 2175,
-          artistShare: 1522.50,
-          contractRate: 70,
-          contractType: 'percentage',
-          status: 'pending',
-          createdAt: '2024-01-16T10:00:00Z',
-          notes: 'Outstanding performance, sold out show'
-        },
-        {
-          id: '2',
-          artistId: '2',
-          artistName: 'Sarah Allen',
-          eventId: 'evt_2',
-          eventTitle: 'Acoustic Sunday Sessions',
-          eventDate: '2024-01-21',
-          grossRevenue: 750,
-          artistShare: 500,
-          contractRate: 500,
-          contractType: 'flat_rate',
-          status: 'paid',
-          paymentDate: '2024-01-22',
-          createdAt: '2024-01-22T09:00:00Z'
-        },
-        {
-          id: '3',
-          artistId: '3',
-          artistName: 'Mountain Road',
-          eventId: 'evt_3',
-          eventTitle: 'Country Crossroads',
-          eventDate: '2024-01-28',
-          grossRevenue: 1800,
-          artistShare: 1170,
-          contractRate: 65,
-          contractType: 'percentage',
-          status: 'processing',
-          createdAt: '2024-01-29T14:30:00Z'
-        }
-      ];
-
-      const mockReport: RoyaltyReport = {
-        period: 'January 2024',
-        totalGrossRevenue: 4725,
-        totalArtistPayments: 3192.50,
-        venueRetention: 1532.50,
-        paymentsPending: 1,
-        paymentsProcessed: 1,
-        paymentsPaid: 1
-      };
-
-      setArtists(mockArtists);
-      setPayments(mockPayments);
-      setReport(mockReport);
-    } catch (error) {
-      toast.error('Failed to load royalty data');
-      console.error('Error loading data:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const isLoading = isArtistsLoading || isPaymentsLoading || isReportsLoading;
 
   const filteredPayments = payments.filter(payment => {
     const matchesArtist = selectedArtist === '' || payment.artistId === selectedArtist;
@@ -182,8 +95,12 @@ const ArtistRoyalties: React.FC = () => {
 
   const handleMarkAsPaid = async (paymentId: string) => {
     try {
-      setPayments(prev => prev.map(payment => 
-        payment.id === paymentId 
+      await artistContractsApi.updateArtistPayment(paymentId, {
+        status: 'paid',
+        paymentDate: new Date().toISOString()
+      });
+      setPayments(prev => prev.map(payment =>
+        payment.id === paymentId
           ? { ...payment, status: 'paid', paymentDate: new Date().toISOString() }
           : payment
       ));
