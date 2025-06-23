@@ -2,6 +2,7 @@
  * Rate Limiting System
  * Implements flexible rate limiting for Train Station Dashboard API
  */
+import { decodeJwt } from 'jose';
 
 export interface RateLimitConfig {
   windowMs: number;
@@ -202,12 +203,13 @@ export const keyGenerators = {
     if (!authHeader?.startsWith('Bearer ')) {
       return keyGenerators.ip(request);
     }
-    
-    // Extract user ID from token (simplified)
+
+    // Extract user ID from JWT using a proper library
     try {
       const token = authHeader.substring(7);
-      // In real implementation, decode JWT and extract user ID
-      return `user:${token.substring(0, 10)}`; // Simplified
+      const payload = decodeJwt(token);
+      const userId = typeof payload.sub === 'string' ? payload.sub : undefined;
+      return userId ? `user:${userId}` : keyGenerators.ip(request);
     } catch {
       return keyGenerators.ip(request);
     }
