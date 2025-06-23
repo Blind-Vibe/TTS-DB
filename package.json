@@ -20,6 +20,7 @@
     "date-fns": "^3.3.1",
     "dompurify": "^3.2.6",
     "dotenv": "^16.5.0",
+    "jose": "^4.14.4",
     "jspdf": "^3.0.1",
     "lucide-react": "^0.344.0",
     "moment": "^2.30.1",
