@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import type { SecuritySettings } from '../../contexts/AuthContext';
 import { TwoFactorSetup } from './TwoFactorSetup';
 import {
   Shield,
@@ -48,7 +49,8 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ onClose })
     revokeSession,
     revokeAllSessions,
     resolveAlert,
-    changePassword
+    changePassword,
+    updateProfile
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<'overview' | 'sessions' | 'devices' | 'alerts' | 'audit' | 'settings'>('overview');
@@ -56,6 +58,50 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ onClose })
   const [auditFilter, setAuditFilter] = useState<'all' | 'login' | 'security' | 'changes'>('all');
   const [alertFilter, setAlertFilter] = useState<'all' | 'unresolved' | 'critical'>('all');
   const [isLoading, setIsLoading] = useState(false);
+
+  const defaultSettings: SecuritySettings = {
+    twoFactorEnabled: false,
+    sessionTimeout: 30,
+    maxSessions: 5,
+    ipWhitelist: [] as string[],
+    allowRememberMe: true,
+    passwordExpiryDays: 90,
+    loginAttemptLimit: 5
+  };
+
+  const [securitySettings, setSecuritySettings] = useState<SecuritySettings>(defaultSettings);
+  const [ipWhitelistInput, setIpWhitelistInput] = useState('');
+
+  useEffect(() => {
+    const settings = userProfile?.security_settings || defaultSettings;
+    setSecuritySettings({ ...defaultSettings, ...settings });
+    setIpWhitelistInput((settings.ipWhitelist || []).join(', '));
+  }, [userProfile]);
+
+  const handleSettingsChange = (
+    field: keyof SecuritySettings,
+    value: string | number | boolean
+  ) => {
+    setSecuritySettings(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSaveSettings = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const updated = {
+      ...securitySettings,
+      ipWhitelist: ipWhitelistInput
+        .split(',')
+        .map(ip => ip.trim())
+        .filter(Boolean)
+    };
+    try {
+      await updateProfile({ security_settings: updated });
+      toast.success('Security settings updated');
+    } catch (error) {
+      console.error('Failed to update security settings:', error);
+      toast.error('Failed to save security settings');
+    }
+  };
 
   useEffect(() => {
     loadSecurityData();
@@ -607,6 +653,82 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ onClose })
     </div>
   );
 
+  const renderSettings = () => (
+    <form onSubmit={handleSaveSettings} className="space-y-6">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <label className="text-white font-medium">Require Two-Factor Authentication</label>
+          <input
+            type="checkbox"
+            className="toggle toggle-primary"
+            checked={securitySettings.twoFactorEnabled}
+            onChange={e => handleSettingsChange('twoFactorEnabled', e.target.checked)}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">Password Expiry (days)</label>
+          <input
+            type="number"
+            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+            value={securitySettings.passwordExpiryDays}
+            onChange={e => handleSettingsChange('passwordExpiryDays', Number(e.target.value))}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">Max Login Attempts</label>
+          <input
+            type="number"
+            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+            value={securitySettings.loginAttemptLimit}
+            onChange={e => handleSettingsChange('loginAttemptLimit', Number(e.target.value))}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">Session Timeout (minutes)</label>
+          <input
+            type="number"
+            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+            value={securitySettings.sessionTimeout}
+            onChange={e => handleSettingsChange('sessionTimeout', Number(e.target.value))}
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            className="toggle toggle-primary"
+            checked={securitySettings.allowRememberMe}
+            onChange={e => handleSettingsChange('allowRememberMe', e.target.checked)}
+          />
+          <label className="text-white">Allow "Remember Me"</label>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-300 mb-1">IP Whitelist</label>
+          <input
+            type="text"
+            className="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white"
+            placeholder="e.g. 192.168.1.1, 10.0.0.0/24"
+            value={ipWhitelistInput}
+            onChange={e => setIpWhitelistInput(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="flex justify-end">
+        <button
+          type="submit"
+          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+        >
+          Save Settings
+        </button>
+      </div>
+    </form>
+  );
+
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-gray-900 rounded-2xl border border-gray-700 max-w-6xl w-full max-h-[90vh] overflow-hidden">
@@ -671,12 +793,7 @@ export const SecurityDashboard: React.FC<SecurityDashboardProps> = ({ onClose })
               {activeTab === 'devices' && renderDevices()}
               {activeTab === 'alerts' && renderAlerts()}
               {activeTab === 'audit' && renderAuditLog()}
-              {activeTab === 'settings' && (
-                <div className="text-center py-12 text-gray-400">
-                  <Settings className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Security settings configuration coming soon</p>
-                </div>
-              )}
+              {activeTab === 'settings' && renderSettings()}
             </>
           )}
         </div>
