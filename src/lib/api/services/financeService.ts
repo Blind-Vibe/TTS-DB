@@ -2,6 +2,7 @@ import { SupabaseAdapter, type QueryOptions } from '../adapters/supabaseAdapter'
 import { validateQuery, validateParams } from '../validation';
 import { UserRole } from '../auth';
 import type { ApiResponse } from '../types';
+import { supabase } from '../../supabase';
 import {
   CreateTransactionSchema,
   UpdateTransactionSchema,
@@ -641,21 +642,94 @@ export class FinanceService {
   /**
    * Generate financial reports
    */
-  async generateReport(type: 'profit_loss' | 'balance_sheet' | 'cash_flow' | 'expenses' | 'revenue', dateFrom?: string, dateTo?: string): Promise<ApiResponse<FinancialReport>> {
-    // This would implement complex financial reporting logic
-    // For now, return a placeholder structure
+  async generateReport(
+    type: 'profit_loss' | 'balance_sheet' | 'cash_flow' | 'expenses' | 'revenue',
+    dateFrom?: string,
+    dateTo?: string
+  ): Promise<ApiResponse<FinancialReport>> {
+    const periodStart = dateFrom || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const periodEnd = dateTo || new Date().toISOString();
+
+    const revenueQuery = this.adapter.executeQuery(
+      {
+        tableName: 'financial_transactions',
+        rateLimitKey: 'finance:reports',
+        enableLogging: true,
+      },
+      async () => {
+        return supabase
+          .from('financial_transactions')
+          .select('sum(amount)')
+          .eq('type', 'income')
+          .gte('date', periodStart)
+          .lte('date', periodEnd)
+          .single();
+      },
+      'read'
+    );
+
+    const expenseQuery = this.adapter.executeQuery(
+      {
+        tableName: 'financial_transactions',
+        rateLimitKey: 'finance:reports',
+        enableLogging: true,
+      },
+      async () => {
+        return supabase
+          .from('financial_transactions')
+          .select('sum(amount)')
+          .eq('type', 'expense')
+          .gte('date', periodStart)
+          .lte('date', periodEnd)
+          .single();
+      },
+      'read'
+    );
+
+    const categoryQuery = this.adapter.executeQuery(
+      {
+        tableName: 'financial_transactions',
+        rateLimitKey: 'finance:reports',
+        enableLogging: true,
+      },
+      async () => {
+        return supabase
+          .from('financial_transactions')
+          .select('category, sum(amount), count(id)', { group: 'category' })
+          .gte('date', periodStart)
+          .lte('date', periodEnd);
+      },
+      'read'
+    );
+
+    const [revenueRes, expenseRes, categoryRes] = await Promise.all([revenueQuery, expenseQuery, categoryQuery]);
+
+    const totalRevenue = revenueRes.success && revenueRes.data?.sum ? (revenueRes.data as any).sum as number : 0;
+    const totalExpenses = expenseRes.success && expenseRes.data?.sum ? (expenseRes.data as any).sum as number : 0;
+    const netIncome = totalRevenue - totalExpenses;
+    const grossMargin = totalRevenue > 0 ? (netIncome / totalRevenue) * 100 : 0;
+
+    const categories = categoryRes.success && Array.isArray(categoryRes.data)
+      ? (categoryRes.data as any[]).map(row => ({
+          categoryId: row.category as string,
+          categoryName: row.category as string,
+          amount: row.sum as number,
+          percentage: totalRevenue + totalExpenses > 0 ? (row.sum as number) / (totalRevenue + totalExpenses) * 100 : 0,
+          transactionCount: row.count as number,
+        }))
+      : [];
+
     const reportData: FinancialReport = {
-      type,
-      periodStart: dateFrom || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      periodEnd: dateTo || new Date().toISOString(),
+      reportType: type,
+      dateRange: { start: periodStart, end: periodEnd },
+      currency: 'USD',
+      data: {
+        totalIncome: totalRevenue,
+        totalExpenses,
+        netIncome,
+        categories,
+      },
       generatedAt: new Date().toISOString(),
-      data: {},
-      summary: {
-        totalRevenue: 0,
-        totalExpenses: 0,
-        netIncome: 0,
-        grossMargin: 0,
-      }
     };
 
     return {
@@ -663,8 +737,14 @@ export class FinanceService {
       data: reportData,
       meta: {
         requestId: crypto.randomUUID(),
-        source: 'reporting'
-      }
+        source: 'reporting',
+        summary: {
+          totalRevenue,
+          totalExpenses,
+          netIncome,
+          grossMargin,
+        },
+      },
     };
   }
 

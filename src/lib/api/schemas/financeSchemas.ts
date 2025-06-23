@@ -432,6 +432,54 @@ export interface FinancialReport {
   generatedAt: string;
 }
 
+export const FinancialReportResponseSchema = z.object({
+  reportType: z.enum(['profit_loss', 'balance_sheet', 'cash_flow', 'expense_report', 'revenue_report']),
+  dateRange: z.object({
+    start: z.string().datetime(),
+    end: z.string().datetime(),
+  }),
+  currency: z.string(),
+  data: z.object({
+    totalIncome: z.number(),
+    totalExpenses: z.number(),
+    netIncome: z.number(),
+    categories: z.array(
+      z.object({
+        categoryId: z.string(),
+        categoryName: z.string(),
+        amount: z.number(),
+        percentage: z.number(),
+        transactionCount: z.number(),
+      })
+    ),
+    accounts: z
+      .array(
+        z.object({
+          accountId: z.string(),
+          accountName: z.string(),
+          balance: z.number(),
+          transactions: z.number(),
+        })
+      )
+      .optional(),
+    trends: z
+      .object({
+        monthlyTotals: z.array(
+          z.object({
+            month: z.string(),
+            income: z.number(),
+            expenses: z.number(),
+            net: z.number(),
+          })
+        ),
+      })
+      .optional(),
+  }),
+  generatedAt: z.string().datetime(),
+});
+
+export type FinancialReportResponse = z.infer<typeof FinancialReportResponseSchema>;
+
 // Business rule validation utilities
 export const validateFinanceBusinessRules = {
   canDeleteTransaction: (transaction: FinancialTransaction): { valid: boolean; reason?: string } => {
