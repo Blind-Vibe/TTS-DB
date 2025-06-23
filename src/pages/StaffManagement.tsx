@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Search, 
@@ -27,7 +27,6 @@ import {
   MapPin,
   BarChart3,
   CalendarDays,
-  Timer,
   Target,
   Zap
 } from 'lucide-react';
@@ -36,7 +35,7 @@ import Breadcrumbs, { useBreadcrumbs } from '../components/navigation/Breadcrumb
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { useStaffManagement } from '../hooks/useStaffManagement';
 import { toast } from 'react-hot-toast';
-import { StaffMember, Shift } from '../types';
+import { StaffMember, Shift, TimeEntry } from '../types';
 import { LineChart, Line, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 interface StaffFormModalProps {
@@ -986,6 +985,111 @@ const CalendarView: React.FC<{ shifts: any[]; onShiftClick: (shift: any) => void
   );
 };
 
+// Time Tracking Component
+const TimeTrackingPanel: React.FC<{ staff: StaffMember[]; entries: TimeEntry[]; onLog: (entry: TimeEntry) => void }> = ({ staff, entries, onLog }) => {
+  const [form, setForm] = useState<{ staffId: string; date: string; hours: string }>({
+    staffId: staff[0]?.id || '',
+    date: format(new Date(), 'yyyy-MM-dd'),
+    hours: ''
+  });
+
+  const payroll = useMemo(() => {
+    const totals: Record<string, number> = {};
+    entries.forEach(e => {
+      const member = staff.find(s => s.id === e.staffId);
+      if (!member || !e.totalHours) return;
+      const pay = (member.hourlyRate || 0) * e.totalHours;
+      totals[e.staffId] = (totals[e.staffId] || 0) + pay;
+    });
+    return totals;
+  }, [entries, staff]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const member = staff.find(s => s.id === form.staffId);
+    const hours = parseFloat(form.hours);
+    if (!member || !hours) return;
+
+    const start = new Date(form.date + 'T08:00:00');
+    const end = new Date(start.getTime() + hours * 60 * 60 * 1000);
+
+    const newEntry: TimeEntry = {
+      id: 'entry-' + Date.now(),
+      staffId: form.staffId,
+      clockInTime: start.toISOString(),
+      clockOutTime: end.toISOString(),
+      totalHours: hours,
+      approved: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    } as TimeEntry;
+
+    onLog(newEntry);
+    setForm({ staffId: staff[0]?.id || '', date: form.date, hours: '' });
+  };
+
+  return (
+    <div className="space-y-6">
+      <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+        <select name="staffId" value={form.staffId} onChange={handleChange} aria-label="Select Staff" className="rounded-lg bg-zinc-800/50 border border-zinc-700/50 p-2 text-white">
+          {staff.map(s => (
+            <option key={s.id} value={s.id}>{s.firstName} {s.lastName}</option>
+          ))}
+        </select>
+        <input type="date" name="date" value={form.date} onChange={handleChange} aria-label="Date" className="rounded-lg bg-zinc-800/50 border border-zinc-700/50 p-2 text-white" />
+        <input type="number" step="0.25" min="0" name="hours" value={form.hours} onChange={handleChange} placeholder="Hours" aria-label="Hours Worked" className="w-24 rounded-lg bg-zinc-800/50 border border-zinc-700/50 p-2 text-white" />
+        <button type="submit" className="rounded-lg bg-amber-500/20 text-amber-400 px-3 py-2" aria-label="Log Hours">Log Hours</button>
+      </form>
+
+      <table className="min-w-full text-sm text-white">
+        <thead>
+          <tr className="text-left">
+            <th className="px-2 py-1">Staff</th>
+            <th className="px-2 py-1">Clock In</th>
+            <th className="px-2 py-1">Clock Out</th>
+            <th className="px-2 py-1 text-right">Hours</th>
+            <th className="px-2 py-1 text-right">Pay</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map(e => {
+            const member = staff.find(s => s.id === e.staffId);
+            const pay = (member?.hourlyRate || 0) * (e.totalHours || 0);
+            return (
+              <tr key={e.id} className="border-t border-zinc-700/50">
+                <td className="px-2 py-1">{member ? `${member.firstName} ${member.lastName}` : e.staffId}</td>
+                <td className="px-2 py-1">{format(new Date(e.clockInTime), 'Pp')}</td>
+                <td className="px-2 py-1">{e.clockOutTime ? format(new Date(e.clockOutTime), 'Pp') : '-'}</td>
+                <td className="px-2 py-1 text-right">{e.totalHours?.toFixed(2)}</td>
+                <td className="px-2 py-1 text-right">${pay.toFixed(2)}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-2">Payroll Summary</h3>
+        <ul className="space-y-1">
+          {Object.entries(payroll).map(([id, total]) => {
+            const member = staff.find(s => s.id === id);
+            return (
+              <li key={id} className="text-sm text-gray-300">
+                {member ? `${member.firstName} ${member.lastName}` : id}: ${total.toFixed(2)}
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
+};
+
 const StaffManagement: React.FC = () => {
   useBreadcrumbs([
     { label: 'Staff Management', path: '/staff' }
@@ -997,13 +1101,11 @@ const StaffManagement: React.FC = () => {
     isLoading, 
     shifts, 
     isLoadingShifts, 
-    addStaff, 
+    addStaff,
     updateStaff,
-    addShift, 
+    addShift,
     updateShift,
-    timeEntries,
-    addTimeEntry,
-    updateTimeEntry
+    timeEntries
   } = useStaffManagement();
   
   const [activeTab, setActiveTab] = useState<'staff' | 'schedule' | 'timetracking' | 'performance'>('staff');
@@ -1015,6 +1117,11 @@ const StaffManagement: React.FC = () => {
   const [editingShift, setEditingShift] = useState<Shift | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [loggedEntries, setLoggedEntries] = useState<TimeEntry[]>([]);
+
+  useEffect(() => {
+    setLoggedEntries(timeEntries);
+  }, [timeEntries]);
 
   // Generate comprehensive mock analytics data
   const mockAnalytics = useMemo((): StaffAnalytics => ({
@@ -1170,6 +1277,10 @@ const StaffManagement: React.FC = () => {
     } else {
       toast.error('No phone number available');
     }
+  };
+
+  const handleLogHours = (entry: TimeEntry) => {
+    setLoggedEntries(prev => [...prev, entry]);
   };
 
   const handleShiftClick = (shift: any) => {
@@ -1442,15 +1553,8 @@ const StaffManagement: React.FC = () => {
         
         {/* Time Tracking Tab */}
         <TabsContent value="timetracking">
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 p-8 text-center backdrop-blur-sm border border-zinc-700/50">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent"></div>
-              <div className="relative">
-                <Timer size={48} className="mx-auto text-blue-500/50 mb-4" />
-                <h2 className="text-xl font-semibold text-white mb-2">Time Tracking System</h2>
-                <p className="text-gray-400">Advanced time tracking with payroll integration coming soon...</p>
-                </div>
-                          </div>
-          </TabsContent>
+          <TimeTrackingPanel staff={staff} entries={loggedEntries} onLog={handleLogHours} />
+        </TabsContent>
           
           {/* Performance Tab */}
           <TabsContent value="performance">
@@ -1539,3 +1643,4 @@ const StaffManagement: React.FC = () => {
 };
 
 export default StaffManagement;
+export { TimeTrackingPanel };
