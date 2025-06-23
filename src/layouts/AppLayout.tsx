@@ -111,6 +111,7 @@ const getBreadcrumbs = (pathname: string): Breadcrumb[] => {
     'inventory': 'Inventory',
     'staff': 'Staff',
     'settings': 'Settings',
+    'system': 'System Settings',
     'documents': 'Documents'
   };
   

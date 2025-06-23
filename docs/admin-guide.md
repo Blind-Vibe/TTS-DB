@@ -83,5 +83,5 @@ WHERE email = 'user@example.com';
 
 ## ✅ Next Steps
 
-The Settings module UI is still under construction. Until it is released, manage roles and configuration through Supabase or SQL commands.
+You can now manage feature flags and advanced security options directly in the Dashboard. Navigate to **Settings → System Settings** in the sidebar. Role management is still handled through the **User Roles** page or database queries.
 

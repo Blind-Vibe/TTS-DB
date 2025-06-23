@@ -45,6 +45,7 @@ const Documents = lazy(() => import('./pages/Documents'));
 const FileManager = lazy(() => import('./pages/FileManager'));
 const Projects = lazy(() => import('./pages/Projects'));
 const Settings = lazy(() => import('./pages/Settings'));
+const SystemSettings = lazy(() => import('./pages/SystemSettings'));
 const AITools = lazy(() => import('./pages/AITools'));
 const StaffManagement = lazy(() => import('./pages/StaffManagement'));
 const UserRoles = lazy(() => import('./pages/UserRoles'));
@@ -276,6 +277,10 @@ const App: React.FC = () => {
                   <Route
                     path="settings"
                     element={<LazyRoute component={Settings} componentName="Settings" fallbackType="card" />}
+                  />
+                  <Route
+                    path="settings/system"
+                    element={<LazyRoute component={SystemSettings} componentName="SystemSettings" fallbackType="card" />}
                   />
                   <Route
                     path="settings/user-roles"

@@ -46,7 +46,7 @@ The Train Station Dashboard is a **production-ready venue management platform** 
 | 🏗️ **Floor Plan Editor** | Interactive layout design | 🟡 Beta |
 | 📈 **Marketing Tools** | Campaign management | 🟡 Beta |
 | 🤖 **AI Integration** | Content generation and insights | 🟡 Beta |
-| ⚙️ **Settings & Configuration** | User roles and system config | 🚧 In Progress |
+| ⚙️ **Settings & Configuration** | User roles and system config | 🟡 Beta |
 
 ### 🎯 Target Users
 
