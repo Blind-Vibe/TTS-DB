@@ -585,8 +585,7 @@ const Marketing: React.FC = () => {
   });
 
   const handleCampaignClick = (id: string) => {
-    console.log(`Viewing campaign ${id}`);
-    // Navigate to campaign detail page in real implementation
+    navigate(`/marketing/${id}`);
   };
 
   return (

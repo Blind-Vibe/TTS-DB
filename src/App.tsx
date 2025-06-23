@@ -38,6 +38,7 @@ const Inventory = lazy(() => import('./pages/Inventory'));
 const InventoryDetail = lazy(() => import('./pages/InventoryDetail'));
 const Marketing = lazy(() => import('./pages/Marketing'));
 const CreateCampaign = lazy(() => import('./pages/CreateCampaign'));
+const CampaignDetail = lazy(() => import('./pages/CampaignDetail'));
 const Ticketing = lazy(() => import('./pages/Ticketing'));
 const EventReviews = lazy(() => import('./pages/Ticketing/EventReviews'));
 const Finances = lazy(() => import('./pages/Finances'));
@@ -225,13 +226,17 @@ const App: React.FC = () => {
                   />
 
                   {/* Marketing */}
-                  <Route 
-                    path="marketing" 
-                    element={<LazyRoute component={Marketing} componentName="Marketing" fallbackType="chart" />} 
+                  <Route
+                    path="marketing"
+                    element={<LazyRoute component={Marketing} componentName="Marketing" fallbackType="chart" />}
                   />
-                  <Route 
-                    path="marketing/create" 
-                    element={<LazyRoute component={CreateCampaign} componentName="CreateCampaign" fallbackType="card" />} 
+                  <Route
+                    path="marketing/create"
+                    element={<LazyRoute component={CreateCampaign} componentName="CreateCampaign" fallbackType="card" />}
+                  />
+                  <Route
+                    path="marketing/:id"
+                    element={<LazyRoute component={CampaignDetail} componentName="CampaignDetail" fallbackType="card" />}
                   />
 
                   {/* Ticketing */}
