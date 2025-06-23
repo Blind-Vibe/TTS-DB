@@ -29,10 +29,22 @@ serve(async (req: Request) => {
   
   try {
     // Get environment variables
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const squareAppId = Deno.env.get("SQUARE_APP_ID") ?? "sandbox-sq0idb-mhLuaUX5qWaFJ9ftx-Y7Rg";
-    const squareAppSecret = Deno.env.get("SQUARE_APP_SECRET") ?? "EAAAlwwuqVJAT82PsThzIrKDyqqFOu-eA-65sWhjhNtyRi6Ha37KUXiLMO16XU8S";
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const squareAppId = Deno.env.get("SQUARE_APP_ID");
+    const squareAppSecret = Deno.env.get("SQUARE_APP_SECRET");
+
+    if (!supabaseUrl || !supabaseServiceKey || !squareAppId || !squareAppSecret) {
+      const missing = [];
+      if (!supabaseUrl) missing.push("SUPABASE_URL");
+      if (!supabaseServiceKey) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+      if (!squareAppId) missing.push("SQUARE_APP_ID");
+      if (!squareAppSecret) missing.push("SQUARE_APP_SECRET");
+      return new Response(
+        JSON.stringify({ error: `Missing environment variables: ${missing.join(", ")}` }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
     
     // Determine if we're using sandbox or production
     const isSandbox = squareAppId.startsWith("sandbox-");
